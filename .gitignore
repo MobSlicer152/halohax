@@ -8,5 +8,7 @@ BuildLog.txt
 *.ilk
 *.pch
 *.idb
+*.log
+*.recipe
 /.vs
 **/ipch
