@@ -15,16 +15,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="loader.asm">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="loader.bat">
-      <Filter>Source Files</Filter>
-    </None>
   </ItemGroup>
 </Project>

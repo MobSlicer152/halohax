@@ -10,5 +10,6 @@ BuildLog.txt
 *.idb
 *.log
 *.recipe
+*.bin
 /.vs
 **/ipch
