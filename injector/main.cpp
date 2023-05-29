@@ -11,11 +11,17 @@
 // Name of the Halo Infinite executable to look for
 #define HALO_IMAGE_NAME "HaloInfinite.exe"
 
+// Name of the DLL to inject
+#define DLL_NAME "halohax.dll"
+
 // Exit the program
 void Quit(int exitCode);
 
 // Get a handle to the first Halo Infinite process found
 HANDLE FindHalo();
+
+// Inject the specified DLL into the specified process
+void InjectDll(HANDLE process, const char* dllName);
 
 int main(int argc, char* argv[])
 {
@@ -26,6 +32,7 @@ int main(int argc, char* argv[])
 #endif
 
     HANDLE haloProcess = FindHalo();
+    InjectDll(haloProcess, DLL_NAME);
 
     Quit(0);
 }
@@ -88,7 +95,13 @@ HANDLE FindHalo()
         Quit(ERROR_OBJECT_NOT_FOUND);
     }
 
-    HANDLE haloProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_WRITE, false, haloPid);
+    HANDLE haloProcess = OpenProcess(PROCESS_CREATE_THREAD |
+        PROCESS_QUERY_INFORMATION |
+        PROCESS_VM_OPERATION |
+        PROCESS_VM_WRITE |
+        PROCESS_VM_WRITE,
+        false,
+        haloPid);
     if (!haloProcess) {
         DWORD error = GetLastError();
         SPDLOG_CRITICAL("Failed to open process {0}: {1}/{1:X}", haloPid, error);
@@ -96,4 +109,61 @@ HANDLE FindHalo()
     }
 
     return haloProcess;
+}
+
+struct ThreadData
+{
+    char* dllName;
+    char* kernel32;
+};
+
+__declspec(noinline) void RemoteLoadDll(void* userData)
+{
+
+}
+__declspec(noinline) void RemoteLoadDllEnd()
+{
+}
+
+void InjectDll(HANDLE process, const char* dllName)
+{
+    char kernel32[] = "kernel32.dll";
+
+    SPDLOG_INFO("Injecting DLL {} into process {:X}", dllName, process);
+
+    SPDLOG_DEBUG("Allocating string memory in process");
+    ThreadData data = {};
+    size_t size = strlen(dllName) + 1 + strlen(kernel32) + 1;
+    data.dllName = (char*)VirtualAllocEx(process, NULL, size, MEM_COMMIT, PAGE_READWRITE);
+    if (!data.dllName)
+    {
+        DWORD error = GetLastError();
+        SPDLOG_CRITICAL("Failed to allocate {} byte(s) of memory in process: {}", size, error);
+        Quit(error);
+    }
+    data.kernel32 = data.dllName + strlen(dllName) + 1;
+    WriteProcessMemory(process, (void*)data.dllName, dllName, strlen(dllName) + 1, NULL);
+    WriteProcessMemory(process, (void*)data.kernel32, kernel32, strlen(kernel32) + 1, NULL);
+    VirtualProtectEx(process, data.dllName, size, PAGE_READONLY, NULL);
+
+    SPDLOG_DEBUG("Allocating code memory in process");
+    size_t codeSize = (uintptr_t)RemoteLoadDllEnd - (uintptr_t)RemoteLoadDll;
+    LPTHREAD_START_ROUTINE codeMemory = (LPTHREAD_START_ROUTINE)VirtualAllocEx(process,
+                                                                              NULL,
+                                                                              codeSize,
+                                                                              MEM_COMMIT,
+                                                                              PAGE_READWRITE);
+    if (!codeMemory)
+    {
+        DWORD error = GetLastError();
+        SPDLOG_CRITICAL("Failed to allocate {} byte(s) of code memory in process: {}", size, error);
+        Quit(error);
+    }
+
+    SPDLOG_DEBUG("Copying DLL loading code to process");
+    WriteProcessMemory(process, codeMemory, RemoteLoadDll, size, NULL);
+    VirtualProtectEx(process, codeMemory, size, PAGE_EXECUTE_READ, NULL);
+
+    SPDLOG_DEBUG("Executing remote thread");
+    CreateRemoteThread(process, NULL, 0x2000, codeMemory, )
 }
