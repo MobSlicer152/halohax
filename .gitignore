@@ -11,5 +11,6 @@ BuildLog.txt
 *.log
 *.recipe
 *.bin
+*.dll
 /.vs
 **/ipch

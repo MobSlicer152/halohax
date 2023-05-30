@@ -21,7 +21,7 @@ LoadHaxDll:
     TEST RAX, RAX
     JZ LoadHaxDllError
     
-    MOV RCX, 7777777H
+    XOR ECX, ECX
     JMP LoadHaxDllEnd
 
 LoadHaxDllError:

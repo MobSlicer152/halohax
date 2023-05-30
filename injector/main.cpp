@@ -11,9 +11,6 @@
 #define SPDLOG_ACTIVE_LEVEL 0
 #include "spdlog/spdlog.h"
 
-// Magic number expected from the remote thread
-#define INJECTOR_MAGIC 0x7777777
-
 // Data passed to the remote thread
 struct ThreadData
 {
@@ -53,7 +50,7 @@ int main(int argc, char* argv[])
 #endif
 
     HANDLE haloProcess = FindHalo();
-    
+
     auto shellcodePath = std::filesystem::absolute(LOADER_NAME);
     SPDLOG_DEBUG("Loading shellcode from {}", shellcodePath.string());
     std::ifstream codeStream(shellcodePath, std::ios::binary | std::ios::ate);
@@ -208,7 +205,7 @@ void InjectDll(HANDLE process, const std::filesystem::path& dllPath, void* code,
 
     DWORD threadExitCode = 0;
     GetExitCodeThread(threadHandle, &threadExitCode);
-    if (threadExitCode == INJECTOR_MAGIC)
+    if (threadExitCode == ERROR_SUCCESS)
     {
         SPDLOG_INFO("Thread completed successfully 0x{:X}", threadExitCode);
     }
