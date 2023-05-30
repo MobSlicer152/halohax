@@ -1,4 +1,4 @@
-#include <algorithm>
+#include <cinttypes>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -153,7 +153,7 @@ void InjectDll(HANDLE process, const std::filesystem::path& dllPath, void* code,
 {
     std::string path = dllPath.string();
 
-    SPDLOG_INFO("Injecting DLL {} into process {:X}", path, (uintptr_t)process);
+    SPDLOG_INFO("Injecting DLL {} into process 0x{:X}", path, (uintptr_t)process);
 
     SPDLOG_DEBUG("Allocating memory in process");
     size_t size = sizeof(ThreadData) + path.size() + 1;
@@ -164,6 +164,9 @@ void InjectDll(HANDLE process, const std::filesystem::path& dllPath, void* code,
         SPDLOG_CRITICAL("Failed to allocate {0} byte(s) of memory in process: {1}/0x{1:X}", size, error);
         Quit(error);
     }
+
+    SPDLOG_DEBUG("Allocated memory at 0x{:X}", (uintptr_t)remoteData);
+
     HMODULE kernel32 = GetModuleHandleA("kernel32.dll");
     ThreadData localData = {};
     localData.dllName = (char*)remoteData + sizeof(ThreadData);
@@ -187,6 +190,8 @@ void InjectDll(HANDLE process, const std::filesystem::path& dllPath, void* code,
         Quit(error);
     }
 
+    SPDLOG_DEBUG("Allocated code memory at 0x{:X}", (uintptr_t)codeMemory);
+
     SPDLOG_DEBUG("Copying DLL loading code to process");
     WriteProcessMemory(process, codeMemory, code, codeSize, nullptr);
     FlushInstructionCache(process, codeMemory, codeSize);
@@ -208,6 +213,11 @@ void InjectDll(HANDLE process, const std::filesystem::path& dllPath, void* code,
     if (threadExitCode == ERROR_SUCCESS)
     {
         SPDLOG_INFO("Thread completed successfully 0x{:X}", threadExitCode);
+
+        SPDLOG_INFO("Cleaning up");
+        VirtualFreeEx(process, codeMemory, codeSize, MEM_FREE);
+        VirtualFreeEx(process, remoteData, size, MEM_FREE);
+        CloseHandle(threadHandle);
     }
     else
     {

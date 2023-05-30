@@ -20,7 +20,7 @@ LoadHaxDll:
     CALL R11
     TEST RAX, RAX
     JZ LoadHaxDllError
-    
+
     XOR ECX, ECX
     JMP LoadHaxDllEnd
 

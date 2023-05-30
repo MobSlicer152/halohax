@@ -28,20 +28,19 @@ BOOL APIENTRY DllMain(HMODULE module,
 
 void Attach()
 {
-    AllocConsole();
-
-    FILE* tempFile;
-    freopen_s(&tempFile, "CONIN$", "r", stdin);
-    freopen_s(&tempFile, "CONOUT$", "w", stdout);
-    freopen_s(&tempFile, "CONOUT$", "w", stderr);
-    std::cin.clear();
-    std::cout.clear();
-    std::cerr.clear();
-#ifdef Debug
-    spdlog::flush_on(spdlog::level::debug);
-#else
-    spdlog::flush_on(spdlog::level::info);
-#endif
+    if (!GetConsoleWindow())
+    {
+        AllocConsole();
+    
+        FILE* tempFile;
+        freopen_s(&tempFile, "CONIN$", "r", stdin);
+        freopen_s(&tempFile, "CONOUT$", "w", stdout);
+        freopen_s(&tempFile, "CONOUT$", "w", stderr);
+        std::cin.clear();
+        std::cout.clear();
+        std::cerr.clear();
+        spdlog::flush_every(std::chrono::seconds(5));
+    }
 
     SPDLOG_INFO("HaloHax loaded");
 
